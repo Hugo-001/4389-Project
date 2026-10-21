@@ -8,10 +8,9 @@
 // ============================================================================
 import { createServer } from './server.js';
 
-
 const server = createServer({
   rpID: process.env.RP_ID ?? 'localhost',
   origin: process.env.ORIGIN ?? `http://localhost:3000`,
   rpName: process.env.RP_NAME ?? 'WebAuthn Demo',
 });
-server.listen(port, () => console.log(`Listening on :${port}`));
+server.listen(3000, () => console.log(`Listening on :3000`));

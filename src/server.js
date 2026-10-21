@@ -46,8 +46,8 @@
 // reading clientDataJSON), URL (parsing the request path), JSON, Map, console.
 import http from 'node:http';
 import crypto from 'node:crypto';
-import { Store } from '../store.js';
-import { unimplementedVerifier } from '../verifier.js';
+import { Store } from './store.js';
+import { unimplementedVerifier } from './verifier.js';
 
 // WebAuthn sends binary data (challenges, ids, keys) as base64url strings in JSON.
 const b64url = (buf) => Buffer.from(buf).toString('base64url');
