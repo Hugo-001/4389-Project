@@ -1,89 +1,71 @@
-// ============================================================================
-// PLACEHOLDER:(database/storage).
-// This file is only the CONTRACT. Every method below is empty. server.js talks to storage exclusively through
-// these methods, so keep the names, arguments and return values the same.
-// Every method may return a value or a Promise: server.js `await`s all of them.
-//
-// Record shapes:
-//   user:       { id, username, displayName, credentialIds: [] }
-//   credential: { id, userId, publicKey, counter, transports }
-//   challenge:  { type, username, expiresAt }   (looked up by the challenge string)
-//   session:    { userId, username, expiresAt } (looked up by the session id)
-//
-// Random values (challenge, session id, user id) must come from a secure source such as
-// crypto.randomBytes(n).toString('base64url'): 32 bytes for challenges and session ids,
-// 16 bytes for user ids. Never Math.random.
-// ============================================================================
+import { randomBytes } from 'node:crypto';
 
+// Temporary in-memory store. All records disappear when the process restarts.
+// Matches the interface used by the team's existing server.js.
 export class Store {
-  // ---- users ----
-  // -> boolean: is this username already registered?
-  hasUser(username) {
-    return 0;
+  constructor() {
+    this.usersByName = new Map();
+    this.usersById = new Map();
+    this.credentials = new Map();
+    this.challenges = new Map();
+    this.sessions = new Map();
   }
 
-  // -> user | undefined, looked up by username
-  getUser(username) {
-    return 0;
-  }
+  hasUser(username) { return this.usersByName.has(username); }
+  getUser(username) { return this.usersByName.get(username); }
+  getUserById(id) { return this.usersById.get(id); }
 
-  // -> user | undefined, looked up by user.id
-  getUserById(id) {
-    return 0;
-  }
-
-  // Create and save a user with a new random id, displayName = username,
-  // credentialIds = [credentialId]. -> the new user
   createUser({ username, credentialId }) {
-    return 0;
+    if (this.hasUser(username)) throw new Error('Username already exists');
+    const user = {
+      id: randomBytes(16).toString('base64url'),
+      username,
+      displayName: username,
+      credentialIds: credentialId ? [credentialId] : [],
+    };
+    this.usersByName.set(username, user);
+    this.usersById.set(user.id, user);
+    return user;
   }
 
-  // ---- credentials ----
-  // -> boolean: is this credential id already stored?
-  hasCredential(id) {
-    return 0;
-  }
+  hasCredential(id) { return this.credentials.has(id); }
+  getCredential(id) { return this.credentials.get(id); }
 
-  // -> credential | undefined
-  getCredential(id) {
-    return 0;
-  }
-
-  // Save a credential (counter defaults to 0 when missing). -> the saved credential
   createCredential({ id, userId, publicKey, counter, transports }) {
-    return 0;
+    if (this.hasCredential(id)) throw new Error('Credential already exists');
+    const user = this.getUserById(userId);
+    if (!user) throw new Error('Unknown user');
+    const credential = { id, userId, publicKey, counter: counter ?? 0, transports: transports ?? [] };
+    this.credentials.set(id, credential);
+    if (!user.credentialIds.includes(id)) user.credentialIds.push(id);
+    return credential;
   }
 
-  // Store the credential's new signature counter. -> nothing
   updateCredentialCounter(id, counter) {
-    return 0;
+    const credential = this.getCredential(id);
+    if (!credential) throw new Error('Unknown credential');
+    if (!Number.isSafeInteger(counter) || counter < 0) throw new Error('Invalid counter');
+    credential.counter = counter;
   }
 
-  // ---- challenges ----
-  // Save a challenge record under a NEW random challenge string. -> that string
   createChallenge({ type, username, expiresAt }) {
-    return 0;
+    const challenge = randomBytes(32).toString('base64url');
+    this.challenges.set(challenge, { type, username, expiresAt });
+    return challenge;
   }
 
-  // Look up AND delete in one step so a challenge can never be used twice.
-  // -> { type, username, expiresAt } | undefined
+  // Atomic lookup and removal in this single-process in-memory implementation.
   takeChallenge(challenge) {
-    return 0;
+    const entry = this.challenges.get(challenge);
+    this.challenges.delete(challenge);
+    return entry;
   }
 
-  // ---- sessions ----
-  // Save a session under a NEW random session id. -> that id
   createSession({ userId, username, expiresAt }) {
-    return 0;
+    const sid = randomBytes(32).toString('base64url');
+    this.sessions.set(sid, { userId, username, expiresAt });
+    return sid;
   }
-
-  // -> { userId, username, expiresAt } | undefined
-  getSession(sid) {
-    return 0;
-  }
-
-  // Remove the session. -> nothing
-  deleteSession(sid) {
-    return 0;
-  }
+  getSession(sid) { return this.sessions.get(sid); }
+  deleteSession(sid) { this.sessions.delete(sid); }
 }
