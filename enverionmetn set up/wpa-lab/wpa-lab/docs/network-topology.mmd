@@ -1,0 +1,45 @@
+%% CS4389 Isolated WPA2/WPA3/Transition Wi-Fi Test Lab — network topology
+%% Render (PNG):  mmdc -i network-topology.mmd -o network-topology.png
+%%   (install once:  npm install -g @mermaid-js/mermaid-cli)
+%% Render (SVG):  mmdc -i network-topology.mmd -o network-topology.svg
+
+flowchart TB
+    subgraph AIRGAP["AIR-GAP BOUNDARY — no uplink, no NAT, no bridge to campus/production/internet"]
+        direction TB
+
+        AP["AP Host (Linux: Kali/Ubuntu VM or Raspberry Pi)<br/>hostapd + dnsmasq<br/>wlan0 = 192.168.50.1/24<br/>DHCP: 192.168.50.50–150 (no gateway/DNS)"]
+
+        ADAPTER["USB Wi-Fi adapter<br/>Alfa AWUS036NHA / AR9271 (ath9k_htc)<br/>AP mode + monitor mode"]
+
+        subgraph SSIDS["Lab SSIDs (one active at a time)"]
+            S2["LAB-WPA2-TEST<br/>WPA2-PSK / CCMP"]
+            S3["LAB-WPA3-TEST<br/>WPA3-SAE / PMF required"]
+            ST["LAB-TRANSITION-TEST<br/>WPA-PSK+SAE / PMF optional"]
+        end
+
+        subgraph CLIENTS["Team-owned test clients"]
+            C1["Client A<br/>WPA3/SAE-capable"]
+            C2["Client B<br/>WPA2-only"]
+        end
+
+        MON["Monitor-mode adapter<br/>(same AR9271, injection self-test only)"]
+
+        AP --- ADAPTER
+        ADAPTER --- S2
+        ADAPTER --- S3
+        ADAPTER --- ST
+        S2 -. "Wi-Fi" .- C1
+        S2 -. "Wi-Fi" .- C2
+        S3 -. "Wi-Fi" .- C1
+        ST -. "Wi-Fi" .- C1
+        ST -. "Wi-Fi" .- C2
+        ADAPTER -. "monitor (self-test)" .- MON
+    end
+
+    INET["Campus / Production / Internet"]
+    AIRGAP x--x|"NO CONNECTION"| INET
+
+    classDef gap fill:#fff3cd,stroke:#b8860b,stroke-width:2px;
+    classDef blocked fill:#f8d7da,stroke:#b02a37,stroke-width:2px;
+    class AIRGAP gap;
+    class INET blocked;
