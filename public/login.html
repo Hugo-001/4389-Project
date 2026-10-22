@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sign in - Passkey Auth</title><link rel="stylesheet" href="css/styles.css"></head>
+<body><main class="card">
+  <h1>Welcome back</h1>
+  <p class="sub">Sign in with the passkey on this device. No password needed.</p>
+  <div id="status" class="msg" role="status" aria-live="polite" hidden></div>
+  <form id="form" novalidate>
+    <div class="field"><label for="username">Username</label>
+      <input id="username" name="username" autocomplete="username webauthn" autocapitalize="none" spellcheck="false" maxlength="64" required></div>
+    <button id="submit" class="btn" type="submit">Sign in with passkey</button>
+  </form>
+  <p class="switch">New here? <a href="register.html">Create an account</a></p>
+</main>
+<script src="js/ui.js"></script>
+<script>
+  const status = document.getElementById("status");
+  const button = document.getElementById("submit");
+  if (!window.PublicKeyCredential) showMessage(status, "error", MESSAGES.unsupported);
+  wireForm({
+    form: document.getElementById("form"), status, button, label: "Sign in with passkey",
+    run: async () => {
+      // TODO(backend): login options -> navigator.credentials.get() -> login verify
+      await pause(1200);
+      showMessage(status, "error", MESSAGES.cancelled); // placeholder outcome
+    },
+  });
+</script></body></html>
