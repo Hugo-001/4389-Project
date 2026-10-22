@@ -4,7 +4,7 @@
 //
 // TODO: import the real verifier and storage and pass them in, e.g.
 //   createServer({ verifier: realVerifier, store: realStore, rpID, origin })
-// Also serve the front-end files here if the team wants one server for everything.
+// Front-end files in public/ are served by server.js.
 // ============================================================================
 import { createServer } from './server.js';
 

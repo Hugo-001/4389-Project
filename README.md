@@ -42,7 +42,7 @@ npm install
 npm start
 ```
 
-The server listens on http://localhost:3000.
+The server listens on http://localhost:3000. Open that address in a browser to use the login page. The page must be opened through the server (not as a `file://`), because WebAuthn and the server's origin checks require the page and the API to share the same origin.
 
 Optional environment variables:
 
@@ -69,6 +69,8 @@ Example: `RP_ID=example.com ORIGIN=https://example.com npm start`
 
 ```
 package.json      Project info and dependencies
+public/
+  index.html      PLACEHOLDER test page (served at http://localhost:3000); replace with the real UI
 src/
   index.js        Starts the server
   server.js       API endpoints, challenges, sessions

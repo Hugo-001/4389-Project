@@ -46,6 +46,8 @@
 // reading clientDataJSON), URL (parsing the request path), JSON, Map, console.
 import http from 'node:http';
 import crypto from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { resolve, sep, extname } from 'node:path';
 import { Store } from './store.js';
 import { unimplementedVerifier } from './verifier.js';
 
@@ -55,6 +57,10 @@ const b64url = (buf) => Buffer.from(buf).toString('base64url');
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 const SESSION_TTL_MS = 60 * 60 * 1000;
 const COOKIE = 'sid';
+// Front-end files are served from public/ so the page and the API share one origin
+// (required by the Origin check, the verifier and the SameSite=Strict cookie).
+const PUBLIC_DIR = resolve(import.meta.dirname, '../public');
+const CONTENT_TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
 
 // Thrown by handlers; the request wrapper at the bottom turns it into a JSON error response.
 class HttpError extends Error {
@@ -273,6 +279,21 @@ export function createServer({
     }
   };
 
+  // Serve a file from public/ ("/" -> index.html). resolve() + the prefix check stop
+  // "../" paths from reaching files outside public/.
+  const serveStatic = async (res, urlPath) => {
+    const file = resolve(PUBLIC_DIR, '.' + (urlPath === '/' ? '/index.html' : urlPath));
+    if (!file.startsWith(PUBLIC_DIR + sep)) throw new HttpError(404, 'Not found');
+    let data;
+    try {
+      data = await readFile(file);
+    } catch {
+      throw new HttpError(404, 'Not found');
+    }
+    res.setHeader('Content-Type', CONTENT_TYPES[extname(file)] ?? 'application/octet-stream');
+    res.end(data);
+  };
+
   const send = (res, status, body) => {
     res.statusCode = status;
     res.setHeader('Content-Type', 'application/json');
@@ -287,6 +308,7 @@ export function createServer({
     try {
       const path = new URL(req.url, 'http://x').pathname;
       const handler = routes[`${req.method} ${path}`];
+      if (!handler && req.method === 'GET' && !path.startsWith('/api/')) return await serveStatic(res, path);
       if (!handler) throw new HttpError(404, 'Not found');
       if (req.method === 'POST') {
         // CSRF guard: browsers always send Origin on cross-origin POSTs.
