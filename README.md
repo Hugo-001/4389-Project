@@ -36,6 +36,24 @@ npm install
 
 `npm install` reads `package.json`, downloads the dependencies into `node_modules/`, and creates or updates `package-lock.json`.
 
+### Windows: "running scripts is disabled on this system"
+
+In PowerShell (including the VS Code terminal on Windows), `npm install` may fail with:
+
+```
+npm : File C:\Program Files\nodejs\npm.ps1 cannot be loaded because running scripts is disabled on this system.
+```
+
+PowerShell's default execution policy blocks the `npm.ps1` script. Fix it in either of these ways:
+
+- Allow local scripts for your Windows account (one-time; answer `Y` if asked):
+
+  ```powershell
+  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+  ```
+
+- Or leave the policy alone and run `npm.cmd` instead of `npm` (for example `npm.cmd install`, `npm.cmd start`), or switch the terminal to Command Prompt or Git Bash.
+
 ## Running
 
 ```bash
@@ -65,6 +83,60 @@ Example: `RP_ID=example.com ORIGIN=https://example.com npm start`
 | GET | `/api/session` | Returns the logged-in user, or 401 |
 | POST | `/api/logout` | Ends the session |
 
+## Wi-Fi test lab (`setup/wpa-lab`)
+
+The `setup/wpa-lab/wpa-lab/` folder holds a separate part of the project: an isolated, air-gapped Wi-Fi access point that can run in WPA2-Personal, WPA3-Personal (SAE), or WPA2/WPA3 transition mode, with scripts and docs to prove which mode is active and that the lab is isolated. It does not depend on the Node.js server above. Full instructions are in [`setup/wpa-lab/wpa-lab/README.md`](setup/wpa-lab/wpa-lab/README.md).
+
+> **Scope:** team-owned hardware only, on an isolated subnet with no internet uplink. Read [`docs/AUTHORIZATION-ISOLATION-NOTE.md`](setup/wpa-lab/wpa-lab/docs/AUTHORIZATION-ISOLATION-NOTE.md) before using the lab.
+
+### Requirements
+
+| Item | Details |
+|---|---|
+| OS | Linux (Kali or Ubuntu). Does not run on Windows or macOS; use a Linux VM with USB passthrough, or a Raspberry Pi |
+| Wi-Fi adapter | Must support AP mode and monitor mode. Reference: Alfa AWUS036NHA (Atheros AR9271, `ath9k_htc`), 2.4 GHz only |
+| Packages | `hostapd` (built with SAE), `dnsmasq`, `iw`, `iproute2`, `aircrack-ng`, `usbutils`, `wpasupplicant`, `firmware-atheros` |
+
+```bash
+sudo apt update
+sudo apt install -y hostapd dnsmasq iw iproute2 aircrack-ng usbutils \
+                    wpasupplicant firmware-atheros
+```
+
+### Before first use
+
+Replace the placeholder passphrases in the configs (`ChangeMe-...-Lab!`), and keep the real values out of the repository:
+
+| Config | Setting |
+|---|---|
+| `configs/hostapd-wpa2.conf` | `wpa_passphrase` |
+| `configs/hostapd-wpa3.conf` | `sae_password` |
+| `configs/hostapd-transition.conf` | `wpa_passphrase` and `sae_password` (same value) |
+
+### Running the lab
+
+Run from `setup/wpa-lab/wpa-lab/` on the Linux machine:
+
+```bash
+./scripts/check-adapter.sh                       # 1. check the adapter (read-only); fix any [FAIL]
+sudo ./scripts/verify-injection.sh wlan0         # 2. optional hardware self-test against our own AP
+sudo ./scripts/start-ap.sh wpa2                  # 3. start the AP: wpa2 | wpa3 | transition
+./scripts/client-check.sh wlan0                  # 4. on a joined test client: prove mode + isolation
+sudo ./scripts/stop-ap.sh                        # 5. tear down
+```
+
+If the adapter isn't `wlan0`, prefix the AP scripts with `IFACE=<name>`.
+
+| Mode | SSID | Security |
+|---|---|---|
+| `wpa2` | `LAB-WPA2-TEST` | WPA2-PSK / CCMP |
+| `wpa3` | `LAB-WPA3-TEST` | SAE, PMF required |
+| `transition` | `LAB-TRANSITION-TEST` | WPA-PSK + SAE, PMF optional |
+
+### Isolation
+
+Clients get addresses on `192.168.50.0/24` with no gateway, no DNS, and no NAT, so nothing on the lab network can reach other networks. The checks to run before, during and after each session are in [`docs/ISOLATION-PROCEDURES.md`](setup/wpa-lab/wpa-lab/docs/ISOLATION-PROCEDURES.md).
+
 ## Project structure
 
 ```
@@ -81,6 +153,12 @@ src/
   server.js       API endpoints, challenges, sessions
   verifier.js     FIDO2 verification (uses @simplewebauthn/server)
   store.js        In-memory storage for users, credentials, challenges, sessions
+setup/wpa-lab/wpa-lab/
+  README.md       Full Wi-Fi lab instructions
+  configs/        hostapd (WPA2 / WPA3 / transition) and dnsmasq configs
+  scripts/        check-adapter, verify-injection, start-ap, stop-ap, client-check
+  docs/           Authorization note, hardware inventory, isolation procedures, topology
+  report/         Team member contribution notes
 ```
 
 Data is kept in memory, so all users and sessions are lost when the server restarts.
