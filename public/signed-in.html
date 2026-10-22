@@ -3,7 +3,18 @@
 <title>Signed in - Passkey Auth</title><link rel="stylesheet" href="css/styles.css"></head>
 <body><main class="card center">
   <h1>You're signed in</h1>
-  <p class="sub">Signed in as <span id="who">alex@utdallas.edu</span> with a passkey.</p>
-  <!-- TODO(backend): load username from the session and sign out for real -->
-  <a class="btn secondary" href="login.html" style="line-height:40px;text-decoration:none">Sign out</a>
-</main></body></html>
+  <p class="sub">Signed in as <span id="who">…</span> with a passkey.</p>
+  <button id="logout" class="btn secondary" type="button">Sign out</button>
+</main>
+<script src="js/ui.js"></script>
+<script>
+  api("/api/session")
+    .then(({ user }) => document.getElementById("who").textContent = user.username)
+    .catch(() => location.href = "login.html");
+
+  document.getElementById("logout").onclick = async () => {
+    await api("/api/logout", {});
+    location.href = "login.html";
+  };
+</script>
+</body></html>

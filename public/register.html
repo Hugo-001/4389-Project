@@ -21,10 +21,20 @@
   if (!window.PublicKeyCredential) showMessage(status, "error", MESSAGES.unsupported);
   wireForm({
     form: document.getElementById("form"), status, button, label: "Register passkey",
-    run: async () => {
-      // TODO(backend): register options -> navigator.credentials.create() -> register verify
-      await pause(1200);
-      showMessage(status, "ok", MESSAGES.registered); // placeholder outcome
-    },
+    run: async (username) => {
+  const displayName = document.getElementById("displayName").value.trim();
+  try {
+    const options = await api("/api/register/options", { username, displayName });
+    const cred = await navigator.credentials.create({
+      publicKey: PublicKeyCredential.parseCreationOptionsFromJSON(options),
+    });
+    await api("/api/register/verify", cred.toJSON());
+    location.href = "signed-in.html";          // verify also starts a session
+  } catch (err) {
+    showMessage(status, "error",
+      err.name === "NotAllowedError" ? MESSAGES.cancelled : err.message);
+  }
+},
+
   });
 </script></body></html>

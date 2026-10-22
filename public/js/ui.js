@@ -22,6 +22,17 @@ function setBusy(btn, busy, label) {
   btn.textContent = busy ? "Waiting…" : label;
 }
 
+async function api(path, body) {
+  const res = await fetch(path, {
+    method: body === undefined ? "GET" : "POST",
+    headers: { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Request failed");
+  return data;
+}
+
 function wireForm({ form, status, button, label, run }) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
