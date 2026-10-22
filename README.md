@@ -70,7 +70,12 @@ Example: `RP_ID=example.com ORIGIN=https://example.com npm start`
 ```
 package.json      Project info and dependencies
 public/
-  index.html      PLACEHOLDER test page (served at http://localhost:3000); replace with the real UI
+  index.html      Redirects to login.html
+  login.html      Sign-in page (UI only, not yet connected to the API)
+  register.html   Registration page (UI only, not yet connected to the API)
+  signed-in.html  Signed-in page (UI only, not yet connected to the API)
+  css/styles.css  Shared styles
+  js/ui.js        Shared UI helpers; backend hooks are marked TODO(backend)
 src/
   index.js        Starts the server
   server.js       API endpoints, challenges, sessions

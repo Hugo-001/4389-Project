@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Register - Passkey Auth</title><link rel="stylesheet" href="css/styles.css"></head>
+<body><main class="card">
+  <h1>Create your account</h1>
+  <p class="sub">Your device will ask you to confirm with Face ID, Touch ID, or a security key.</p>
+  <div id="status" class="msg" role="status" aria-live="polite" hidden></div>
+  <form id="form" novalidate>
+    <div class="field"><label for="username">Username</label>
+      <input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="64" required></div>
+    <div class="field"><label for="displayName">Display name (optional)</label>
+      <input id="displayName" name="displayName" autocomplete="name" maxlength="64"></div>
+    <button id="submit" class="btn" type="submit">Register passkey</button>
+  </form>
+  <p class="switch">Have an account? <a href="login.html">Sign in</a></p>
+</main>
+<script src="js/ui.js"></script>
+<script>
+  const status = document.getElementById("status");
+  const button = document.getElementById("submit");
+  if (!window.PublicKeyCredential) showMessage(status, "error", MESSAGES.unsupported);
+  wireForm({
+    form: document.getElementById("form"), status, button, label: "Register passkey",
+    run: async () => {
+      // TODO(backend): register options -> navigator.credentials.create() -> register verify
+      await pause(1200);
+      showMessage(status, "ok", MESSAGES.registered); // placeholder outcome
+    },
+  });
+</script></body></html>
