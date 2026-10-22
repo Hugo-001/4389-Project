@@ -1,24 +1,70 @@
-// ============================================================================
-// PLACEHOLDER: (FIDO2 verification).
-// server.js calls these two functions and trusts their answer, so they must do
-// the real cryptographic checks. Until then they throw, so the server refuses everyone.
-//
-// TODO(teammate): implement both. Each may be sync or async.
-//
-// verifyRegistration({ response, expectedChallenge, expectedOrigin, expectedRPID })
-//   -> { verified: boolean, credential?: { id, publicKey, counter, transports? } }
-//
-// verifyAuthentication({ response, expectedChallenge, expectedOrigin, expectedRPID, credential })
-//   -> { verified: boolean, newCounter?: number }
-//
-// `response` is the PublicKeyCredential JSON the browser sent (binary fields base64url).
-// Hook it up by passing it to createServer({ verifier }) in src/index.js.
-// ============================================================================
+import {
+    verifyRegistrationResponse,
+    verifyAuthenticationResponse
+} from '@simplewebauthn/server';
+
+// Verifies a new FIDO2/WebAuthn registration response
+async function verifyRegistration({
+    response,
+    expectedChallenge,
+    expectedOrigin,
+    expectedRPID
+}) {
+    try {
+        const verification = await verifyRegistrationResponse({
+            response,
+            expectedChallenge,
+            expectedOrigin,
+            expectedRPID,
+        });
+
+        return {
+            verified: verification.verified,
+            credential: verification.registrationInfo?.credential
+        };
+    } catch (error) {
+        console.error('Registration verification failed:', error);
+
+        return {
+            verified: false,
+            error: error.message
+        };
+    }
+}
+
+// Verifies a FIDO2/WebAuthn login response
+async function verifyAuthentication({
+    response,
+    expectedChallenge,
+    expectedOrigin,
+    expectedRPID,
+    credential
+}) {
+    try {
+        const verification = await verifyAuthenticationResponse({
+            response,
+            expectedChallenge,
+            expectedOrigin,
+            expectedRPID,
+            credential,
+        });
+
+        return {
+            verified: verification.verified,
+            newCounter: verification.authenticationInfo?.newCounter
+        };
+    } catch (error) {
+        console.error('Authentication verification failed:', error);
+
+        return {
+            verified: false,
+            error: error.message
+        };
+    }
+}
+
+// FIDO2 verifier used by the backend server
 export const unimplementedVerifier = {
-  async verifyRegistration() {
-    throw new Error('FIDO2 verifier not configured');
-  },
-  async verifyAuthentication() {
-    throw new Error('FIDO2 verifier not configured');
-  },
+    verifyRegistration,
+    verifyAuthentication
 };
