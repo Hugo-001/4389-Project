@@ -62,9 +62,3 @@ async function verifyAuthentication({
         };
     }
 }
-
-// FIDO2 verifier used by the backend server
-export const unimplementedVerifier = {
-    verifyRegistration,
-    verifyAuthentication
-};

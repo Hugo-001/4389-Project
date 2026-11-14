@@ -221,9 +221,18 @@ export function createServer({
       // STEP 3 of login: the browser returns a signed assertion. response.id says which
       // credential signed it, so we can fetch the matching stored public key.
       const response = req.body;
-      const { challenge } = await consumeChallenge(response, 'authentication');
+      const { challenge, username } = await consumeChallenge(response, 'authentication');
       const credential = await store.getCredential(response.id);
       if (!credential) throw new HttpError(401, 'Authentication failed');
+      // The challenge was issued for a specific username: the credential that signed it MUST
+      // belong to that user. Without this, any valid passkey on the device (e.g. user A's)
+      // would be accepted for a login started as user B.
+      if (username !== null) {
+        const expectedUser = typeof username === 'string' && (await store.getUser(username));
+        if (!expectedUser || expectedUser.id !== credential.userId) {
+          throw new HttpError(401, 'Authentication failed');
+        }
+      }
       const result = await verifier.verifyAuthentication({
         response,
         expectedChallenge: challenge,
