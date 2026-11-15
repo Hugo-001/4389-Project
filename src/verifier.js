@@ -62,3 +62,7 @@ async function verifyAuthentication({
         };
     }
 }
+
+// The real FIDO2 verifier, exported so the server (and tests) can use it.
+export const verifier = { verifyRegistration, verifyAuthentication };
+export const unimplementedVerifier = verifier;

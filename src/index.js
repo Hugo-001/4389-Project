@@ -7,8 +7,10 @@
 // Front-end files in public/ are served by server.js.
 // ============================================================================
 import { createServer } from './server.js';
+import { verifier } from './verifier.js';
 
 const server = createServer({
+  verifier,
   rpID: process.env.RP_ID ?? 'localhost',
   origin: process.env.ORIGIN ?? `http://localhost:3000`,
   rpName: process.env.RP_NAME ?? 'WebAuthn Demo',
