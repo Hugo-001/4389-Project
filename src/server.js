@@ -281,7 +281,7 @@ export function createServer({
     if (!chunks.length) return {};
     try {
       const body = JSON.parse(Buffer.concat(chunks).toString());
-      if (body === null || typeof body !== 'object') throw 0;
+      if (body === null || typeof body !== 'object' || Array.isArray(body)) throw 0;
       return body;
     } catch {
       throw new HttpError(400, 'Invalid JSON');
