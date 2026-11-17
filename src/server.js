@@ -261,6 +261,33 @@ export function createServer({
       return { user: { username: s.username } };
     },
 
+    'GET /api/credentials': async (req) => {
+      const session = await getSession(req);
+      if (!session) throw new HttpError(401, 'Not authenticated');
+      return { credentials: await store.listCredentials(session.userId) };
+    },
+    'POST /api/credentials/rename': async (req) => {
+      const session = await getSession(req);
+      if (!session) throw new HttpError(401, 'Not authenticated');
+      const { id, nickname } = req.body;
+      if (typeof id !== 'string' || typeof nickname !== 'string' || !nickname.trim() || nickname.length > 64)
+        throw new HttpError(400, 'Invalid credential or nickname');
+      if (!await store.renameCredential(session.userId, id, nickname.trim())) throw new HttpError(404, 'Passkey not found');
+      return { ok: true };
+    },
+    'POST /api/credentials/remove': async (req) => {
+      const session = await getSession(req);
+      if (!session) throw new HttpError(401, 'Not authenticated');
+      const { id } = req.body;
+      if (typeof id !== 'string') throw new HttpError(400, 'Invalid credential');
+      const outcome = await store.removeCredential(session.userId, id);
+      if (outcome === 'missing') throw new HttpError(404, 'Passkey not found');
+      if (outcome === 'account-deleted') {
+        res.setHeader('Set-Cookie', cookie('', 0));
+        return { ok: true, accountDeleted: true };
+      }
+      return { ok: true, accountDeleted: false };
+    },
     'POST /api/logout': async (req, res) => {
       const s = await getSession(req);
       if (s) await store.deleteSession(s.sid);
