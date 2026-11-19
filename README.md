@@ -137,6 +137,21 @@ If the adapter isn't `wlan0`, prefix the AP scripts with `IFACE=<name>`.
 
 Clients get addresses on `192.168.50.0/24` with no gateway, no DNS, and no NAT, so nothing on the lab network can reach other networks. The checks to run before, during and after each session are in [`docs/ISOLATION-PROCEDURES.md`](setup/wpa-lab/wpa-lab/docs/ISOLATION-PROCEDURES.md).
 
+## Security tests 
+
+`run-tests.mjs` runs 11 security tests against the real server — no physical authenticator needed. It starts its own server on http://localhost:3000 with the real verifier and a fresh store, builds WebAuthn registration/assertion responses in code (ES256 keypair, hand-built CBOR attestation, DER signatures), and checks each attack end to end.
+
+Run one test at a time:
+
+    node run-tests.mjs <repo-path> outN.json N  # N = 1..11
+
+Don't run `npm start` at the same time: the harness starts its own server on port 3000.
+
+The 11 tests: 1 wrong challenge, 2 replay, 3 wrong credential, 4 edited response, 5 expired challenge, 6 wrong origin, 7 counter rollback, 8 session handling, 9 challenge type mix-up, 10 duplicate registration, 11 bad/missing fields.
+
+Each run prints the requests, responses, and server log lines, and writes `outN.json` — the machine-readable receipt (pass/fail per check, expected vs actual, server log lines). All 11 tests pass (55 checks) on main.
+
+
 ## Project structure
 
 ```
