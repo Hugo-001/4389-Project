@@ -1,0 +1,49 @@
+%% CS4389 Isolated WPA2/WPA3/Transition Wi-Fi Test Lab — network topology
+%% FULLY VIRTUAL: all radios are mac80211_hwsim interfaces inside one Linux VM.
+%% Render (PNG):  mmdc -i network-topology.mmd -o network-topology.png
+%%   (install once:  npm install -g @mermaid-js/mermaid-cli)
+%% Render (SVG):  mmdc -i network-topology.mmd -o network-topology.svg
+
+flowchart TB
+    subgraph VM["Single Linux VM (Kali/Ubuntu) — NO physical Wi-Fi hardware"]
+        direction TB
+
+        HWSIM["mac80211_hwsim kernel module<br/>radios=5 (all on channel 6, shared sim medium)"]
+
+        subgraph AIRGAP["AIR-GAP BOUNDARY — no uplink, no NAT, no bridge to the VM's real NIC"]
+            direction TB
+
+            subgraph APS["Simulated AP radios (hostapd) + air-gapped DHCP (dnsmasq)"]
+                S2["wlan0 · LAB-WPA2-TEST<br/>WPA2-PSK / CCMP<br/>192.168.50.1/24 (no gw/DNS)"]
+                S3["wlan1 · LAB-WPA3-TEST<br/>WPA3-SAE / PMF required<br/>192.168.51.1/24 (no gw/DNS)"]
+                ST["wlan2 · LAB-TRANSITION-TEST<br/>WPA-PSK+SAE / PMF optional<br/>192.168.52.1/24 (no gw/DNS)"]
+            end
+
+            CLIENT["wlan3 · test client (wpa_supplicant)<br/>WPA2-PSK or SAE profile"]
+            MON["wlan4 · monitor/capture<br/>(injection self-test, handshake capture)"]
+        end
+
+        REALNIC["VM real NIC (management/NAT)<br/>— NOT bridged to any wlanX —"]
+
+        HWSIM --- S2
+        HWSIM --- S3
+        HWSIM --- ST
+        HWSIM --- CLIENT
+        HWSIM --- MON
+        S2 -. "Wi-Fi (sim)" .- CLIENT
+        S3 -. "Wi-Fi (sim)" .- CLIENT
+        ST -. "Wi-Fi (sim)" .- CLIENT
+        S2 -. "capture" .- MON
+        S3 -. "capture" .- MON
+        ST -. "capture" .- MON
+    end
+
+    INET["Campus / Production / Internet"]
+    AIRGAP x--x|"NO CONNECTION"| REALNIC
+    REALNIC x--x|"lab never routed here"| INET
+
+    classDef gap fill:#fff3cd,stroke:#b8860b,stroke-width:2px;
+    classDef blocked fill:#f8d7da,stroke:#b02a37,stroke-width:2px;
+    class AIRGAP gap;
+    class INET blocked;
+    class REALNIC blocked;

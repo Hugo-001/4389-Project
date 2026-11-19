@@ -1,18 +1,28 @@
 #!/usr/bin/env bash
 # =============================================================================
 # client-check.sh  —  Prove association + DHCP + negotiated security (Linux)
-# CS4389 isolated Wi-Fi test lab.
+# CS4389 isolated Wi-Fi test lab. 100% virtual — NO physical adapter.
 #
-# Run this FROM A CONNECTED LINUX CLIENT (a test client joined to the lab AP).
-# It shows the association state, the DHCP lease on the 192.168.50.0/24 subnet,
-# and the negotiated cipher / key-management so you can prove WPA2 vs WPA3 vs
-# transition actually took effect.
+# Run this against the simulated CLIENT interface (from setup-virtual.sh) after
+# joining one of the lab SSIDs with it. It shows the association state, the DHCP
+# lease on the isolated lab subnet (192.168.50-52.0/24), and the negotiated
+# cipher / key-management so you can prove WPA2 vs WPA3 vs transition.
 #
-# Usage:  ./client-check.sh [iface]   (default iface: wlan0)
+# Join an SSID with the client radio first, e.g. (WPA3 example):
+#   sudo wpa_passphrase LAB-WPA2-TEST '<psk>' > /tmp/c.conf
+#   sudo wpa_supplicant -B -i <client_iface> -c /tmp/c.conf
+#   sudo dhclient <client_iface>
+#
+# Usage:  ./client-check.sh [iface]   (default: role map's CLIENT_IFACE)
 # =============================================================================
 set -euo pipefail
 
-IFACE="${1:-wlan0}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=lib-roles.sh
+. "${SCRIPT_DIR}/lib-roles.sh"
+load_roles
+
+IFACE="${1:-$CLIENT_IFACE}"
 
 command -v iw >/dev/null 2>&1 || { echo "[FAIL] 'iw' missing: sudo apt install -y iw"; exit 2; }
 
@@ -29,8 +39,8 @@ if echo "$LINK" | grep -qi "Connected to"; then
   SSID=$(echo "$LINK" | awk -F': ' '/SSID/{print $2; exit}')
   echo "    [PASS] Associated to SSID: ${SSID:-<unknown>}"
 else
-  echo "    [FAIL] Not associated on ${IFACE}. Join the lab SSID first."
-  echo "           (nmcli dev wifi connect 'LAB-WPA2-TEST' password '<yours>')"
+  echo "    [FAIL] Not associated on ${IFACE}. Join a lab SSID with the client radio first."
+  echo "           (see the header of this script for wpa_supplicant + dhclient steps)"
   exit 1
 fi
 
@@ -39,10 +49,11 @@ echo
 echo "[2] IP / DHCP lease:"
 IPLINE=$(ip -4 addr show "$IFACE" | awk '/inet /{print $2}')
 echo "    Address: ${IPLINE:-<none>}"
-if echo "$IPLINE" | grep -q "^192\.168\.50\."; then
-  echo "    [PASS] Got a lease on the isolated lab subnet (192.168.50.0/24)."
+# Lab subnets are 192.168.50.x (wpa2), .51.x (wpa3), .52.x (transition).
+if echo "$IPLINE" | grep -qE "^192\.168\.5[0-2]\."; then
+  echo "    [PASS] Got a lease on an isolated lab subnet (192.168.50-52.0/24)."
 else
-  echo "    [WARN] No 192.168.50.x address. DHCP may not have completed."
+  echo "    [WARN] No 192.168.5[0-2].x address. DHCP may not have completed."
 fi
 # Confirm air-gap: there should be NO default route via this interface.
 if ip route show default dev "$IFACE" 2>/dev/null | grep -q default; then
@@ -54,10 +65,8 @@ fi
 # --- 3. Negotiated security (cipher / key management) ------------------------
 echo
 echo "[3] Negotiated security:"
-# 'iw dev <if> link' shows RSN info on many drivers; station dump has more.
 RSN=$(iw dev "$IFACE" link 2>/dev/null | grep -iE "RSN|cipher|authentication|group" || true)
 if [ -z "$RSN" ]; then
-  # Fall back to the station dump against the connected BSSID.
   RSN=$(iw dev "$IFACE" station dump 2>/dev/null | grep -iE "cipher|authent|rsn" || true)
 fi
 if [ -n "$RSN" ]; then
@@ -67,7 +76,6 @@ else
   echo "           wpa_cli -i ${IFACE} status | grep -E 'key_mgmt|pairwise|group|pmf'"
 fi
 
-# wpa_cli gives the clearest key_mgmt readout when wpa_supplicant manages the link.
 if command -v wpa_cli >/dev/null 2>&1; then
   echo
   echo "    wpa_cli status (key_mgmt / cipher / pmf):"

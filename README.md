@@ -120,11 +120,48 @@ Currently, removing the only registered passkey is blocked to prevent account lo
 The backend also provides authenticated credential-listing, renaming, and removal operations used by `/passkeys.html`.
 
 ## Testing
+## Security tests 
+
+`run-tests.mjs` runs 11 security tests against the real server — no physical authenticator needed. It starts its own server on http://localhost:3000 with the real verifier and a fresh store, builds WebAuthn registration/assertion responses in code (ES256 keypair, hand-built CBOR attestation, DER signatures), and checks each attack end to end.
+
+Run one test at a time:
+
+    node run-tests.mjs <repo-path> outN.json N  # N = 1..11
+
+Don't run `npm start` at the same time: the harness starts its own server on port 3000.
+
+The 11 tests: 1 wrong challenge, 2 replay, 3 wrong credential, 4 edited response, 5 expired challenge, 6 wrong origin, 7 counter rollback, 8 session handling, 9 challenge type mix-up, 10 duplicate registration, 11 bad/missing fields.
+
+Each run prints the requests, responses, and server log lines, and writes `outN.json` — the machine-readable receipt (pass/fail per check, expected vs actual, server log lines). All 11 tests pass (55 checks) on main.
+
+
+## Project structure
 
 Run the database test:
 
 ```bash
 node --test test/database.test.js
+```
+package.json      Project info and dependencies
+run-tests.mjs     Script to test the Test Cases
+public/
+  index.html      Redirects to login.html
+  login.html      Sign-in page (UI only, not yet connected to the API)
+  register.html   Registration page (UI only, not yet connected to the API)
+  signed-in.html  Signed-in page (UI only, not yet connected to the API)
+  css/styles.css  Shared styles
+  js/ui.js        Shared UI helpers; backend hooks are marked TODO(backend)
+src/
+  index.js        Starts the server
+  server.js       API endpoints, challenges, sessions
+  verifier.js     FIDO2 verification (uses @simplewebauthn/server)
+  store.js        In-memory storage for users, credentials, challenges, sessions
+setup/wpa-lab/wpa-lab/
+  README.md       Full Wi-Fi lab instructions
+  configs/        hostapd (WPA2 / WPA3 / transition) and dnsmasq configs
+  scripts/        check-adapter, verify-injection, start-ap, stop-ap, client-check
+  docs/           Authorization note, hardware inventory, isolation procedures, topology
+  report/         Team member contribution notes
 ```
 
 The tests exercise database storage and credential operations without requiring a physical authenticator.
