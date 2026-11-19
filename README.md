@@ -141,6 +141,7 @@ Clients get addresses on `192.168.50.0/24` with no gateway, no DNS, and no NAT, 
 
 ```
 package.json      Project info and dependencies
+run-tests.mjs     Script to test the Test Cases
 public/
   index.html      Redirects to login.html
   login.html      Sign-in page (UI only, not yet connected to the API)
