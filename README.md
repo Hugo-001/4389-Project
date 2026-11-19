@@ -1,32 +1,61 @@
-# WebAuthn Backend
+# FIDO2 Passwordless Authentication — Database & Account Management
 
-Passwordless login server using WebAuthn / FIDO2 passkeys. Users register and sign in with an authenticator (phone, laptop, security key) instead of a password; the server stores only public keys.
+Passwordless login server using WebAuthn / FIDO2 passkeys. Users register and sign in using an authenticator, such as Windows Hello, a phone, or a security key, instead of a password.
+
+The application uses **SQLite** to store user accounts, public keys, credential IDs, authentication counters, and session information persistently.
 
 ## Requirements
 
 | Tool | Version | Check with |
 |---|---|---|
-| [Node.js](https://nodejs.org/) | 22 or newer | `node -v` |
-| npm | comes with Node.js | `npm -v` |
+| Node.js | 22 or newer | `node -v` |
+| npm | Included with Node.js | `npm -v` |
+| Git | Latest compatible version | `git --version` |
+
+SQLite is included through Node.js's built-in `node:sqlite` module. No separate database server is required.
 
 ## Dependencies
 
-### npm packages
+| Package / Module | Purpose |
+|---|---|
+| `@simplewebauthn/server` (`^14.0.3`) | WebAuthn registration and authentication verification |
+| `node:sqlite` | Persistent SQL database |
+| `node:http` | HTTP server and API |
+| `node:crypto` | Cryptographic hashing and random values |
+| `node:fs` | File and directory operations |
+| `node:path` | Filesystem path handling |
 
-| Package | Version | Used in | Purpose |
-|---|---|---|---|
-| [`@simplewebauthn/server`](https://simplewebauthn.dev/docs/packages/server) | `^14.0.3` | `src/verifier.js` | Verifies WebAuthn registration and authentication responses (challenge, origin, RP ID, signature, counter) |
+Install npm dependencies with:
 
-`npm install` also installs the packages `@simplewebauthn/server` depends on. The exact versions of everything installed are recorded in `package-lock.json`.
+```bash
+npm install
+```
 
-### Built-in Node.js modules (no install needed)
+## Database
 
-| Module | Used in | Purpose |
-|---|---|---|
-| `node:http` | `src/server.js` | HTTP server |
-| `node:crypto` | `src/server.js`, `src/store.js` | SHA-256 hashing and secure random challenges, session IDs and user IDs |
+**Database system:** SQLite  
+**Database file:** `data/webauthn.sqlite`  
+**Database implementation:** `src/database.js`  
+**Database operations:** `src/store.js`
+
+The database is automatically initialized when the application starts.
+
+### Database tables
+
+| Table | Description |
+|---|---|
+| `users` | User IDs, usernames, display names, creation and update timestamps |
+| `credentials` | Credential IDs, public keys, signature counters, transports, device information, nicknames, and timestamps |
+| `challenges` | Temporary WebAuthn challenges and expiration times |
+| `sessions` | Authentication session identifiers and expiration times |
+
+Foreign keys link credentials and sessions to registered users.
+
+Private authentication keys remain on the user's authenticator and are never stored by the server.
 
 ## Setup
+
+Clone the project:
 
 ```bash
 git clone https://github.com/Hugo-001/4389-Project.git
@@ -34,109 +63,63 @@ cd 4389-Project
 npm install
 ```
 
-`npm install` reads `package.json`, downloads the dependencies into `node_modules/`, and creates or updates `package-lock.json`.
+On Windows PowerShell, if npm scripts are blocked, use:
 
-### Windows: "running scripts is disabled on this system"
-
-In PowerShell (including the VS Code terminal on Windows), `npm install` may fail with:
-
-```
-npm : File C:\Program Files\nodejs\npm.ps1 cannot be loaded because running scripts is disabled on this system.
+```powershell
+npm.cmd install
+npm.cmd start
 ```
 
-PowerShell's default execution policy blocks the `npm.ps1` script. Fix it in either of these ways:
-
-- Allow local scripts for your Windows account (one-time; answer `Y` if asked):
-
-  ```powershell
-  Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
-  ```
-
-- Or leave the policy alone and run `npm.cmd` instead of `npm` (for example `npm.cmd install`, `npm.cmd start`), or switch the terminal to Command Prompt or Git Bash.
-
-## Running
+## Running the Application
 
 ```bash
 npm start
 ```
 
-The server listens on http://localhost:3000. Open that address in a browser to use the login page. The page must be opened through the server (not as a `file://`), because WebAuthn and the server's origin checks require the page and the API to share the same origin.
+Open:
 
-Optional environment variables:
+http://localhost:3000
 
-| Variable | Default | Meaning |
-|---|---|---|
-| `RP_ID` | `localhost` | Domain the passkeys are bound to |
-| `ORIGIN` | `http://localhost:3000` | Exact URL the front end is served from |
-| `RP_NAME` | `WebAuthn Demo` | Name shown by the authenticator |
+### Application pages
 
-Example: `RP_ID=example.com ORIGIN=https://example.com npm start`
-
-## API endpoints
-
-| Method | Path | Description |
-|---|---|---|
-| POST | `/api/register/options` | Start registration: returns a challenge and options for `navigator.credentials.create()` |
-| POST | `/api/register/verify` | Finish registration: verifies the new credential and stores its public key |
-| POST | `/api/login/options` | Start login: returns a challenge and options for `navigator.credentials.get()` |
-| POST | `/api/login/verify` | Finish login: verifies the signature and starts a session |
-| GET | `/api/session` | Returns the logged-in user, or 401 |
-| POST | `/api/logout` | Ends the session |
-
-## Wi-Fi test lab (`setup/wpa-lab`)
-
-The `setup/wpa-lab/wpa-lab/` folder holds a separate part of the project: an isolated, air-gapped Wi-Fi access point that can run in WPA2-Personal, WPA3-Personal (SAE), or WPA2/WPA3 transition mode, with scripts and docs to prove which mode is active and that the lab is isolated. It does not depend on the Node.js server above. Full instructions are in [`setup/wpa-lab/wpa-lab/README.md`](setup/wpa-lab/wpa-lab/README.md).
-
-> **Scope:** team-owned hardware only, on an isolated subnet with no internet uplink. Read [`docs/AUTHORIZATION-ISOLATION-NOTE.md`](setup/wpa-lab/wpa-lab/docs/AUTHORIZATION-ISOLATION-NOTE.md) before using the lab.
-
-### Requirements
-
-| Item | Details |
+| Page | Purpose |
 |---|---|
-| OS | Linux (Kali or Ubuntu). Does not run on Windows or macOS; use a Linux VM with USB passthrough, or a Raspberry Pi |
-| Wi-Fi adapter | Must support AP mode and monitor mode. Reference: Alfa AWUS036NHA (Atheros AR9271, `ath9k_htc`), 2.4 GHz only |
-| Packages | `hostapd` (built with SAE), `dnsmasq`, `iw`, `iproute2`, `aircrack-ng`, `usbutils`, `wpasupplicant`, `firmware-atheros` |
+| `/login.html` | Authenticate with a registered passkey |
+| `/register.html` | Register a new user and passkey |
+| `/signed-in.html` | View the authenticated account |
+| `/passkeys.html` | Manage registered passkeys |
 
-```bash
-sudo apt update
-sudo apt install -y hostapd dnsmasq iw iproute2 aircrack-ng usbutils \
-                    wpasupplicant firmware-atheros
-```
+## Account and Credential Management
 
-### Before first use
+Authenticated users can:
 
-Replace the placeholder passphrases in the configs (`ChangeMe-...-Lab!`), and keep the real values out of the repository:
+- View their registered passkeys.
+- Rename passkeys for easier identification.
+- Remove a registered passkey when more than one exists.
+- Sign out of their current session.
 
-| Config | Setting |
-|---|---|
-| `configs/hostapd-wpa2.conf` | `wpa_passphrase` |
-| `configs/hostapd-wpa3.conf` | `sae_password` |
-| `configs/hostapd-transition.conf` | `wpa_passphrase` and `sae_password` (same value) |
+Removing a passkey deletes its server-side credential record, preventing that credential from being used for future authentication. It does not delete the passkey stored on the user's physical device.
 
-### Running the lab
+Currently, removing the only registered passkey is blocked to prevent account lockout. Registering additional passkeys to an existing account is a future enhancement.
 
-Run from `setup/wpa-lab/wpa-lab/` on the Linux machine:
+## API Endpoints
 
-```bash
-./scripts/check-adapter.sh                       # 1. check the adapter (read-only); fix any [FAIL]
-sudo ./scripts/verify-injection.sh wlan0         # 2. optional hardware self-test against our own AP
-sudo ./scripts/start-ap.sh wpa2                  # 3. start the AP: wpa2 | wpa3 | transition
-./scripts/client-check.sh wlan0                  # 4. on a joined test client: prove mode + isolation
-sudo ./scripts/stop-ap.sh                        # 5. tear down
-```
+### Authentication
 
-If the adapter isn't `wlan0`, prefix the AP scripts with `IFACE=<name>`.
-
-| Mode | SSID | Security |
+| Method | Endpoint | Description |
 |---|---|---|
-| `wpa2` | `LAB-WPA2-TEST` | WPA2-PSK / CCMP |
-| `wpa3` | `LAB-WPA3-TEST` | SAE, PMF required |
-| `transition` | `LAB-TRANSITION-TEST` | WPA-PSK + SAE, PMF optional |
+| POST | `/api/register/options` | Generate registration options |
+| POST | `/api/register/verify` | Verify and store a new credential |
+| POST | `/api/login/options` | Generate authentication options |
+| POST | `/api/login/verify` | Verify authentication and start a session |
+| GET | `/api/session` | Retrieve current session |
+| POST | `/api/logout` | End current session |
 
-### Isolation
+### Credential Management
 
-Clients get addresses on `192.168.50.0/24` with no gateway, no DNS, and no NAT, so nothing on the lab network can reach other networks. The checks to run before, during and after each session are in [`docs/ISOLATION-PROCEDURES.md`](setup/wpa-lab/wpa-lab/docs/ISOLATION-PROCEDURES.md).
+The backend also provides authenticated credential-listing, renaming, and removal operations used by `/passkeys.html`.
 
+## Testing
 ## Security tests 
 
 `run-tests.mjs` runs 11 security tests against the real server — no physical authenticator needed. It starts its own server on http://localhost:3000 with the real verifier and a fresh store, builds WebAuthn registration/assertion responses in code (ES256 keypair, hand-built CBOR attestation, DER signatures), and checks each attack end to end.
@@ -154,6 +137,10 @@ Each run prints the requests, responses, and server log lines, and writes `outN.
 
 ## Project structure
 
+Run the database test:
+
+```bash
+node --test test/database.test.js
 ```
 package.json      Project info and dependencies
 run-tests.mjs     Script to test the Test Cases
@@ -177,4 +164,6 @@ setup/wpa-lab/wpa-lab/
   report/         Team member contribution notes
 ```
 
-Data is kept in memory, so all users and sessions are lost when the server restarts.
+The tests exercise database storage and credential operations without requiring a physical authenticator.
+
+For manual testing, register an account, sign in, open the passkey management page, and verify that credential records remain available after restarting the server.
