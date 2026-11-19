@@ -33,3 +33,21 @@ test('users, credentials, counters, removal, challenges and sessions', () => {
     assert.equal(store.getSession(sid),undefined);
   } finally { store.close(); }
 });
+
+test('comments: saved with author, newest first, stored verbatim, deleted with the account', () => {
+  const store = new Store(openDatabase(':memory:'));
+  try {
+    const alice = store.createUser({username:'alice'});
+    const bob = store.createUser({username:'bob'});
+    const first = store.addComment({userId:alice.id,text:'Hello'});
+    assert.equal(first.text,'Hello');
+    assert.ok(first.createdAt > 0);
+    store.addComment({userId:bob.id,text:'<img src=x onerror=alert(1)>'});
+    assert.deepEqual(store.listComments().map(c=>[c.username,c.text]),
+      [['bob','<img src=x onerror=alert(1)>'],['alice','Hello']]);
+    assert.equal(store.listComments(1).length,1);
+    store.createCredential({id:'bob-key',userId:bob.id,publicKey:new Uint8Array([1])});
+    assert.equal(store.removeCredential(bob.id,'bob-key'),'account-deleted');
+    assert.deepEqual(store.listComments().map(c=>c.username),['alice']);
+  } finally { store.close(); }
+});

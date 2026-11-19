@@ -11,13 +11,13 @@ The newer-uploaded FIDO2 archive includes a working verifier but its `src/store.
 The frontend archive includes mock register/login flows (with `pause()` and placeholder outcomes), a hardcoded signed-in username, and an inactive sign-out link. The integrated baseline already replaces these with real WebAuthn API calls, a session lookup, and logout. Those functioning versions are retained; the frontend archive's matching stylesheet and landing page are carried forward.
 
 ## Database and backend
-SQLite via built-in `node:sqlite`; database path `data/webauthn.sqlite` (override with `DB_PATH`). Tables: users, credentials, challenges, sessions. Credentials store public keys, credential IDs, counters, transports, and metadata. Authenticated users can list/rename/remove passkeys at `/passkeys.html`. Removing the last passkey is blocked to avoid lockout.
+SQLite via built-in `node:sqlite`; database path `data/webauthn.sqlite` (override with `DB_PATH`). Tables: users, credentials, challenges, sessions, comments. Credentials store public keys, credential IDs, counters, transports, and metadata. Signed-in users can read and post comments on `/signed-in.html`. The passkey list/rename/remove endpoints remain in the API, but the website has no page for them.
 
 ## Run on Windows (PowerShell)
 1. Install Node.js 22+ and open PowerShell in this directory.
 2. Run `npm.cmd install`.
 3. Run `npm.cmd start`.
-4. Visit `http://localhost:3000`, register, sign in, and visit `http://localhost:3000/passkeys.html`.
+4. Visit `http://localhost:3000`, register, sign in, and post a comment on the signed-in page.
 5. Run `node --test test/database.test.js` for the storage unit test.
 
 ## Limitations

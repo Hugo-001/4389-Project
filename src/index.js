@@ -9,3 +9,13 @@ const server = createServer({ verifier, store,
   origin: process.env.ORIGIN ?? `http://localhost:${port}`,
   rpName: process.env.RP_NAME ?? 'WebAuthn Demo' });
 server.listen(port, () => console.log(`Listening on http://localhost:${port}`));
+
+// On Ctrl+C / kill, close the database cleanly so SQLite merges the -wal file
+// back into webauthn.sqlite (otherwise that only happens on the next start).
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.once(signal, () => {
+    store.close();
+    console.log('Database closed. Server stopped.');
+    process.exit(0);
+  });
+}

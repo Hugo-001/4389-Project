@@ -18,6 +18,7 @@ Open `http://localhost:3000`. Database is created automatically at `data/webauth
 - `credentials`: globally unique credential ID, owning user, COSE public-key bytes, signature counter, transports, device type, backup state, nickname, timestamps. Foreign key cascades on user deletion.
 - `challenges`: one-time challenge, ceremony type, username and expiry.
 - `sessions`: SHA-256 hash of opaque session token, user reference and expiry. Raw tokens are only sent in HttpOnly cookies.
+- `comments`: numeric ID, author (user reference, cascades on user deletion), plain-text body (1–500 characters, validated by the server) and created timestamp.
 
 All timestamp fields are milliseconds since Unix epoch. Never store passkey private keys.
 
@@ -26,6 +27,10 @@ All timestamp fields are milliseconds since Unix epoch. Never store passkey priv
 - `GET /api/credentials` returns `{credentials:[...]}` with safe metadata, no public keys.
 - `POST /api/credentials/rename` JSON `{ "id": "credential-id", "nickname": "Laptop" }`.
 - `POST /api/credentials/remove` JSON `{ "id": "credential-id" }`.
+- `GET /api/comments` returns `{comments:[...]}`: the 50 newest, each with `username`, `text` and `createdAt`.
+- `POST /api/comments` JSON `{ "text": "Nice demo!" }` (1–500 characters after trimming).
+
+The website has no page for the credential endpoints; comments are shown on `/signed-in.html`.
 
 Removal rejects deletion of the final passkey to avoid locking users out. Existing registration creates a first passkey; **adding a second passkey to an existing account is not yet implemented**. To exercise removal, create a second credential via the Store API in a local test or add an authenticated passkey-enrollment flow with fresh user verification before production use.
 

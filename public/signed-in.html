@@ -1,12 +1,30 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Signed in - Passkey Auth</title><link rel="stylesheet" href="css/styles.css"></head>
-<body><main class="card center">
-  <h1>You're signed in</h1>
-  <p class="sub">Signed in as <span id="who">…</span> with a passkey.</p>
-  <button id="logout" class="btn secondary" type="button">Sign out</button>
+<body><main class="stack">
+  <section class="card center">
+    <h1>You're signed in</h1>
+    <p class="sub">Signed in as <span id="who">…</span> with a passkey.</p>
+    <button id="logout" class="btn secondary" type="button">Sign out</button>
+  </section>
+
+  <section class="card" aria-labelledby="comments-title">
+    <h2 id="comments-title">Comments</h2>
+    <form id="comment-form" novalidate>
+      <div class="field">
+        <label for="comment-text">Write a comment</label>
+        <textarea id="comment-text" name="text" rows="3" maxlength="500"></textarea>
+        <div id="comment-count" class="hint">0 / 500</div>
+      </div>
+      <div id="comment-status" class="msg" role="status" aria-live="polite" hidden></div>
+      <button id="comment-submit" class="btn" type="submit">Post comment</button>
+    </form>
+    <p id="comment-empty" class="empty" hidden>No comments yet. Be the first to write one.</p>
+    <ul id="comment-list" class="comments"></ul>
+  </section>
 </main>
 <script src="js/ui.js"></script>
+<script src="js/comments.js"></script>
 <script>
   api("/api/session")
     .then(({ user }) => document.getElementById("who").textContent = user.username)
@@ -16,5 +34,4 @@
     await api("/api/logout", {});
     location.href = "login.html";
   };
-</script>
-<p><a href="/passkeys.html">Manage passkeys</a></p></body></html>
+</script></body></html>

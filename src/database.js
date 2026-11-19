@@ -28,6 +28,11 @@ export function openDatabase(path = process.env.DB_PATH ?? './data/webauthn.sqli
       expires_at INTEGER NOT NULL
     );
     CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions(expires_at);
+    CREATE TABLE IF NOT EXISTS comments (
+      id INTEGER PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      body TEXT NOT NULL, created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS comments_user_idx ON comments(user_id);
   `);
   return db;
 }

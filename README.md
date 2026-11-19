@@ -48,8 +48,9 @@ The database is automatically initialized when the application starts.
 | `credentials` | Credential IDs, public keys, signature counters, transports, device information, nicknames, and timestamps |
 | `challenges` | Temporary WebAuthn challenges and expiration times |
 | `sessions` | Authentication session identifiers and expiration times |
+| `comments` | Comment text, author (user ID), and creation time |
 
-Foreign keys link credentials and sessions to registered users.
+Foreign keys link credentials, sessions, and comments to registered users.
 
 Private authentication keys remain on the user's authenticator and are never stored by the server.
 
@@ -86,21 +87,15 @@ http://localhost:3000
 |---|---|
 | `/login.html` | Authenticate with a registered passkey |
 | `/register.html` | Register a new user and passkey |
-| `/signed-in.html` | View the authenticated account |
-| `/passkeys.html` | Manage registered passkeys |
+| `/signed-in.html` | View the signed-in account, sign out, and read or write comments |
 
-## Account and Credential Management
+## Comments
 
-Authenticated users can:
+Signed-in users can write comments on `/signed-in.html`. Each comment is saved in the `comments` table with its author and time, and every signed-in user sees the 50 most recent, newest first.
 
-- View their registered passkeys.
-- Rename passkeys for easier identification.
-- Remove a registered passkey when more than one exists.
-- Sign out of their current session.
-
-Removing a passkey deletes its server-side credential record, preventing that credential from being used for future authentication. It does not delete the passkey stored on the user's physical device.
-
-Currently, removing the only registered passkey is blocked to prevent account lockout. Registering additional passkeys to an existing account is a future enhancement.
+- Comments are plain text, 1–500 characters. The page inserts them with `textContent`, so HTML or script in a comment is displayed as text, never run.
+- Reading and posting both require a signed-in session. Posting is also covered by the server's Origin check and the `SameSite=Strict` session cookie.
+- A user's comments are deleted along with their account.
 
 ## API Endpoints
 
@@ -115,9 +110,16 @@ Currently, removing the only registered passkey is blocked to prevent account lo
 | GET | `/api/session` | Retrieve current session |
 | POST | `/api/logout` | End current session |
 
+### Comments
+
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/comments` | List the 50 most recent comments (signed-in users only) |
+| POST | `/api/comments` | Post a comment: `{ "text": "..." }`, 1–500 characters |
+
 ### Credential Management
 
-The backend also provides authenticated credential-listing, renaming, and removal operations used by `/passkeys.html`.
+The backend still provides authenticated credential-listing, renaming, and removal endpoints (`GET /api/credentials`, `POST /api/credentials/rename`, `POST /api/credentials/remove`). The website has no page for them.
 
 ## Testing
 ## Security tests 

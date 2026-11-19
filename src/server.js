@@ -56,6 +56,7 @@ const b64url = (buf) => Buffer.from(buf).toString('base64url');
 // A challenge must be used within 5 minutes; a session lasts 1 hour.
 const CHALLENGE_TTL_MS = 5 * 60 * 1000;
 const SESSION_TTL_MS = 60 * 60 * 1000;
+const COMMENT_MAX_LENGTH = 500;
 const COOKIE = 'sid';
 // Front-end files are served from public/ so the page and the API share one origin
 // (required by the Origin check, the verifier and the SameSite=Strict cookie).
@@ -108,16 +109,22 @@ export function createServer({
   // After a successful ceremony: create a random session id, store it server-side,
   // and hand it to the browser as an HttpOnly cookie (JS can't read it; SameSite=Strict
   // stops cross-site requests carrying it).
+  // The cookie has no Max-Age, so the browser deletes it when it closes and the user
+  // must sign in again. SESSION_TTL_MS still caps the session server-side if the
+  // browser stays open.
   const startSession = async (res, user) => {
     const sid = await store.createSession({
       userId: user.id,
       username: user.username,
       expiresAt: now() + SESSION_TTL_MS,
     });
-    res.setHeader('Set-Cookie', cookie(sid, SESSION_TTL_MS / 1000));
+    res.setHeader('Set-Cookie', cookie(sid));
   };
+  // maxAge omitted -> browser-session cookie; cookie('', 0) -> delete it now (logout).
   const cookie = (value, maxAge) =>
-    `${COOKIE}=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secureCookies ? '; Secure' : ''}`;
+    `${COOKIE}=${value}; HttpOnly; SameSite=Strict; Path=/` +
+    (maxAge === undefined ? '' : `; Max-Age=${maxAge}`) +
+    (secureCookies ? '; Secure' : '');
 
   // Look up the session for a request's cookie, dropping it if expired.
   const getSession = async (req) => {
@@ -287,6 +294,22 @@ export function createServer({
         return { ok: true, accountDeleted: true };
       }
       return { ok: true, accountDeleted: false };
+    },
+
+    // Comments: signed-in users read the latest comments and post plain-text ones.
+    // The page inserts them with textContent, so HTML in a comment is shown, never run.
+    'GET /api/comments': async (req) => {
+      if (!await getSession(req)) throw new HttpError(401, 'Not authenticated');
+      return { comments: await store.listComments() };
+    },
+    'POST /api/comments': async (req) => {
+      const session = await getSession(req);
+      if (!session) throw new HttpError(401, 'Not authenticated');
+      const text = typeof req.body.text === 'string' ? req.body.text.trim() : '';
+      if (!text || text.length > COMMENT_MAX_LENGTH)
+        throw new HttpError(400, `Comment must be 1-${COMMENT_MAX_LENGTH} characters`);
+      const comment = await store.addComment({ userId: session.userId, text });
+      return { comment: { ...comment, username: session.username } };
     },
     'POST /api/logout': async (req, res) => {
       const s = await getSession(req);

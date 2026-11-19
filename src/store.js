@@ -60,6 +60,14 @@ export class Store {
       return 'removed';
     } catch(e) { this.db.exec('ROLLBACK'); throw e; }
   }
+  addComment({userId,text}) {
+    const r=this.db.prepare('INSERT INTO comments(user_id,body,created_at) VALUES(?,?,?) RETURNING id,body,created_at').get(userId,text,Date.now());
+    return {id:r.id,text:r.body,createdAt:r.created_at};
+  }
+  // Newest first. Comments are deleted with their author (ON DELETE CASCADE).
+  listComments(limit=50) { return this.db.prepare(`SELECT c.id,c.body,c.created_at,u.username FROM comments c
+    JOIN users u ON u.id=c.user_id ORDER BY c.id DESC LIMIT ?`).all(limit)
+    .map(r=>({id:r.id,username:r.username,text:r.body,createdAt:r.created_at})); }
   createChallenge({type,username,expiresAt}) {
     const challenge=token(); this.db.prepare('INSERT INTO challenges VALUES(?,?,?,?)').run(challenge,type,username ?? null,expiresAt); return challenge;
   }

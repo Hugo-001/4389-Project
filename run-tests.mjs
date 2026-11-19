@@ -138,8 +138,10 @@ console.log = (...a) => { const s = a.map(String).join(' '); if (!isNoise(s)) se
 const { createServer } = await import(pathToFileURL(path.join(repoDir, 'src', 'server.js')).href);
 const { Store } = await import(pathToFileURL(path.join(repoDir, 'src', 'store.js')).href);
 const { verifier } = await import(pathToFileURL(path.join(repoDir, 'src', 'verifier.js')).href);
+const { openDatabase } = await import(pathToFileURL(path.join(repoDir, 'src', 'database.js')).href);
 
-const store = new Store();
+// In-memory SQLite: every run starts empty and never touches data/webauthn.sqlite.
+const store = new Store(openDatabase(':memory:'));
 let nowMs = Date.now();
 const server = createServer({ verifier, store, rpID: RP_ID, origin: ORIGIN, now: () => nowMs });
 await new Promise((resolve) => server.listen(PORT, resolve));

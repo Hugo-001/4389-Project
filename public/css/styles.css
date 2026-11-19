@@ -8,7 +8,7 @@ h1{margin:0 0 4px;font-size:22px;font-weight:600}
 .field{margin-bottom:14px}
 label{display:block;font-size:13px;color:var(--mut);margin-bottom:4px}
 input{width:100%;height:40px;padding:0 12px;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px}
-input:focus-visible,.btn:focus-visible,a:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+input:focus-visible,textarea:focus-visible,.btn:focus-visible,a:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 .btn{display:block;width:100%;height:42px;border:1px solid var(--fg);border-radius:8px;background:var(--fg);color:var(--bg);font:500 14.5px inherit;font-family:inherit;cursor:pointer}
 .btn.secondary{background:transparent;color:var(--fg);border-color:var(--line)}
 .btn[disabled]{opacity:.7;cursor:default}
@@ -20,3 +20,14 @@ a{color:var(--ac)}
 .msg.error{background:var(--er-bg);color:var(--er)}
 .msg.wait{background:var(--wt-bg);color:var(--wt)}
 .center{text-align:center}
+.stack{width:100%;max-width:400px;display:flex;flex-direction:column;gap:16px}
+h2{margin:0 0 14px;font-size:18px;font-weight:600}
+textarea{display:block;width:100%;min-height:84px;padding:10px 12px;font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;resize:vertical}
+.hint{margin-top:4px;font-size:12.5px;color:var(--mut);text-align:right}
+.empty{margin:16px 0 0;font-size:14px;color:var(--mut)}
+.comments{list-style:none;margin:16px 0 0;padding:0}
+.comments:empty{display:none}
+.comment{padding:12px 0;border-top:1px solid var(--line)}
+.comment-meta{font-size:13px;color:var(--mut)}
+.comment-meta strong{color:var(--fg);font-weight:600}
+.comment-text{margin:2px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
